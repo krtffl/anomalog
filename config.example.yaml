@@ -1,0 +1,66 @@
+# anomalog configuration
+# Copy this file and adjust for your environment.
+
+sources:
+  # File tailing: watch a log file for new lines
+  - name: nginx
+    method: file
+    path: /var/log/nginx/access.log
+    sensitivity: 0.5          # 0.0 (conservative) to 1.0 (aggressive)
+    training_window_hours: 168 # 7 days
+    anomaly_types:
+      - error_rate_spike
+      - novel_pattern
+      - latency_shift
+      - frequency_deviation
+
+  # Loki push: receive logs from Promtail
+  # - name: app-api
+  #   method: loki
+  #   loki_labels:
+  #     job: app-api
+  #     environment: production
+  #   sensitivity: 0.7
+
+  # HTTP POST: direct log submission
+  # - name: custom-service
+  #   method: http
+  #   sensitivity: 0.3
+
+# Alert channels (all optional)
+alerts:
+  - type: telegram
+    telegram_bot_token: "YOUR_BOT_TOKEN"
+    telegram_chat_id: "YOUR_CHAT_ID"
+    min_severity: medium       # low, medium, high, critical
+
+  # - type: email
+  #   smtp_host: smtp.example.com
+  #   smtp_port: 587
+  #   smtp_user: alerts@example.com
+  #   smtp_password: "secret"
+  #   email_to:
+  #     - oncall@example.com
+  #   min_severity: medium
+
+  # - type: slack
+  #   slack_webhook_url: "https://hooks.slack.com/..."
+  #   min_severity: high
+
+  # - type: alertmanager
+  #   alertmanager_url: "http://alertmanager:9093"
+  #   min_severity: low
+
+alert_cooldown_minutes: 30     # Dedup window per (source, anomaly_type)
+
+storage:
+  duckdb_path: ./data/anomalog.duckdb
+  sqlite_path: ./data/anomalog.sqlite
+  retention_days: 30
+
+dashboard:
+  enabled: true
+  listen_host: 127.0.0.1      # 0.0.0.0 to expose to network
+  listen_port: 8701
+
+log_level: info                # trace, debug, info, warn, error

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Sources ({{ total_sources }})</h2>
+<div class="cards">
+{% for src in sources %}
+<div class="card">
+    <strong><a href="/source/{{ src.name }}">{{ src.name }}</a></strong><br>
+    Method: <code>{{ src.method }}</code><br>
+    Sensitivity: {{ src.sensitivity }}<br>
+    Baseline: {% if src.has_baseline %}<span class="badge badge-ok">trained</span>{% else %}<span class="badge badge-warn">pending</span>{% endif %}
+</div>
+{% endfor %}
+</div>
+
+<h2>Recent Anomalies</h2>
+<div hx-get="/api/anomalies?limit=20" hx-trigger="every 30s" hx-swap="innerHTML">
+{% include "partials/anomaly_table.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+<table>
+<thead>
+<tr><th>Time</th><th>Type</th><th>Severity</th><th>Source</th><th>Score</th><th>Description</th></tr>
+</thead>
+<tbody>
+{% for a in anomalies %}
+<tr>
+<td>{{ a.detected_at }}</td>
+<td>{{ a.anomaly_type }}</td>
+<td><span class="severity-{{ a.severity }}">{{ a.severity }}</span></td>
+<td><a href="/source/{{ a.source }}">{{ a.source }}</a></td>
+<td>{{ "%.2f"|format(a.score) if a.score is number else a.score }}</td>
+<td>{{ a.description[:100] }}</td>
+</tr>
+{% endfor %}
+{% if not anomalies %}
+<tr><td colspan="6" style="color:#8b949e">No anomalies detected yet.</td></tr>
+{% endif %}
+</tbody>
+</table>

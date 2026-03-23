@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Alerts{% endblock %}
+{% block content %}
+<h2>All Alerts</h2>
+<div hx-get="/api/anomalies?limit=100" hx-trigger="every 30s" hx-swap="innerHTML">
+{% include "partials/anomaly_table.html" %}
+</div>
+{% endblock %}

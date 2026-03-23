@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Rust build artifacts
+rust/target/
+target/
+
+# Data
+data/
+*.duckdb
+*.sqlite
+
+# Environment
+.env

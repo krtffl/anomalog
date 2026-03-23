@@ -1,0 +1,13 @@
+[package]
+name = "anomalog-rust"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }
+logmole-core = { path = "/home/krtffl/Documents/logmole/logmole-core" }
+serde_json = "1"
