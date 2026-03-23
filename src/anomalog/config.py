@@ -46,6 +46,38 @@ class DashboardConfig(BaseModel):
     listen_port: int = 8701
 
 
+class MetricsTargetConfig(BaseModel):
+    name: str
+    url: str
+    scrape_interval: int = 60
+    timeout: int = 10
+
+
+class MetricsConfig(BaseModel):
+    targets: list[MetricsTargetConfig] = Field(default_factory=list)
+    include_patterns: list[str] = Field(default_factory=list)
+    exclude_patterns: list[str] = Field(default_factory=list)
+
+
+class PredictionThreshold(BaseModel):
+    direction: str = "above"  # "above" or "below"
+    value: float
+
+
+class PredictionsConfig(BaseModel):
+    enabled: bool = False
+    horizons: list[int] = Field(default=[24, 48, 168])
+    retrain_interval: int = 21600  # 6 hours
+    thresholds: dict[str, PredictionThreshold] = Field(default_factory=dict)
+
+
+class CorrelationConfig(BaseModel):
+    enabled: bool = False
+    window_seconds: int = 300
+    min_confidence: float = 0.5
+    check_interval: int = 60
+
+
 class AnomalogConfig(BaseModel):
     sources: list[SourceConfig] = Field(min_length=1)
     alerts: list[AlertChannelConfig] = Field(default_factory=list)
@@ -53,6 +85,10 @@ class AnomalogConfig(BaseModel):
     dashboard: DashboardConfig = DashboardConfig()
     alert_cooldown_minutes: int = 30
     log_level: str = "info"
+    metrics: MetricsConfig = MetricsConfig()
+    predictions: PredictionsConfig = PredictionsConfig()
+    correlation: CorrelationConfig = CorrelationConfig()
+    license_path: str | None = None
 
 
 def load_config(path: Path) -> AnomalogConfig:

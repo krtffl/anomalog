@@ -104,3 +104,65 @@ def train(config: str, source: str) -> None:
     finally:
         duck.close()
         sqlite.close()
+
+
+@main.command("license-info")
+@click.option(
+    "--config", "-c", required=True, type=click.Path(exists=True), help="Path to config.yaml"
+)
+def license_info(config: str) -> None:
+    """Show license status and enabled features."""
+    cfg = load_config(Path(config))
+
+    if not cfg.license_path:
+        click.echo("No license path configured.")
+        raise SystemExit(0)
+
+    from anomalog.pro.license import LicenseValidator
+
+    validator = LicenseValidator(cfg.license_path)
+
+    if not validator.is_valid:
+        click.echo("License: INVALID or expired")
+        raise SystemExit(1)
+
+    status = "VALID (grace period)" if validator.in_grace_period else "VALID"
+    click.echo(f"License: {status}")
+    click.echo(f"Expires: {validator.expires_at}")
+    click.echo(f"Features: {', '.join(validator.features)}")
+
+
+@main.command()
+@click.option(
+    "--config", "-c", required=True, type=click.Path(exists=True), help="Path to config.yaml"
+)
+@click.option("--metric", "-m", required=True, help="Metric name to predict")
+def predict(config: str, metric: str) -> None:
+    """Manually trigger prediction for a metric."""
+    cfg = load_config(Path(config))
+
+    from datetime import datetime, timedelta, timezone
+
+    from anomalog.prediction.model_manager import train_and_store
+    from anomalog.storage.duckdb import DuckDBStorage
+
+    duck = DuckDBStorage(cfg.storage.duckdb_path)
+    try:
+        since = datetime.now(timezone.utc) - timedelta(days=7)
+        samples = duck.get_recent_metrics(metric, since=since)
+        if not samples:
+            click.echo(f"No metric data found for '{metric}'", err=True)
+            raise SystemExit(1)
+
+        labels_hash = samples[0].get("labels_hash", "default")
+        result = train_and_store(metric, labels_hash, samples, cfg.predictions, duck)
+        if result:
+            click.echo(
+                f"Prediction complete: model={result['model_type']}, "
+                f"RMSE={result['rmse']:.4f}"
+            )
+        else:
+            click.echo("Prediction failed: insufficient data", err=True)
+            raise SystemExit(1)
+    finally:
+        duck.close()

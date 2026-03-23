@@ -36,3 +36,32 @@ async def get_sources(request: Request) -> list[dict]:
         }
         for src in config.sources
     ]
+
+
+@router.get("/predictions")
+async def get_predictions(
+    request: Request, metric_name: str | None = None, limit: int = 50
+) -> list[dict]:
+    state = request.app.state.extra
+    duck = state.get("duck")
+    if not duck or not state.get("pro_enabled", False):
+        return []
+    return duck.get_predictions(metric_name=metric_name, limit=limit)
+
+
+@router.get("/correlated-events")
+async def get_correlated_events(request: Request, limit: int = 50) -> list[dict]:
+    state = request.app.state.extra
+    duck = state.get("duck")
+    if not duck or not state.get("pro_enabled", False):
+        return []
+    return duck.get_correlated_events(limit=limit)
+
+
+@router.get("/metrics")
+async def get_metrics(request: Request) -> list[str]:
+    state = request.app.state.extra
+    duck = state.get("duck")
+    if not duck or not state.get("pro_enabled", False):
+        return []
+    return duck.get_metric_names()

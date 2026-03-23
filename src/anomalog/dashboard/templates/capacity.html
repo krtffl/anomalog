@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Capacidad{% endblock %}
+{% block content %}
+<h2>Predicciones de capacidad</h2>
+{% if not pro_enabled %}
+<div class="card" style="border-color: #9e6a03;">
+  <p>Las predicciones de capacidad requieren una licencia Pro.</p>
+</div>
+{% else %}
+<div hx-get="/api/predictions?limit=20" hx-trigger="load, every 60s" hx-swap="innerHTML">
+  <p style="color:#8b949e">Cargando predicciones...</p>
+</div>
+{% endif %}
+{% endblock %}

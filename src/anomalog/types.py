@@ -54,3 +54,37 @@ class Anomaly:
     context: dict  # Flexible context data
     sample_lines: list[str] = field(default_factory=list)
     alerted: bool = False
+
+
+@dataclass
+class MetricSample:
+    name: str
+    labels_hash: str
+    labels: dict[str, str]
+    value: float
+    timestamp: datetime
+    metric_type: str  # gauge, counter, histogram, summary
+    source: str
+
+
+@dataclass
+class CapacityPrediction:
+    metric_name: str
+    labels_hash: str
+    model_type: str  # "autoarima" or "arima"
+    horizon_hours: int
+    predictions: list[tuple[str, float]]  # (iso_timestamp, value)
+    exhaustion_time: datetime | None
+    threshold: float | None
+    rmse: float
+    predicted_at: datetime
+
+
+@dataclass
+class CorrelatedEvent:
+    id: str
+    log_event_id: str
+    metric_event_id: str
+    time_delta_sec: float
+    confidence: float
+    detected_at: datetime

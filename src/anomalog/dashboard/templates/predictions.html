@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Predicciones{% endblock %}
+{% block content %}
+<h2>Predicciones de métricas</h2>
+{% if not pro_enabled %}
+<div class="card" style="border-color: #9e6a03;">
+  <p>Las predicciones de métricas requieren una licencia Pro.</p>
+</div>
+{% else %}
+<div hx-get="/api/predictions?limit=50" hx-trigger="load, every 60s" hx-swap="innerHTML">
+  <table>
+  <thead>
+  <tr><th>Predicted At</th><th>Metric</th><th>Horizon (h)</th><th>Threshold</th><th>Exhaustion</th></tr>
+  </thead>
+  <tbody>
+  {% for p in predictions %}
+  <tr>
+  <td>{{ p.predicted_at }}</td>
+  <td><code>{{ p.metric_name }}</code></td>
+  <td>{{ p.horizon_hours }}</td>
+  <td>{{ "%.2f"|format(p.threshold) if p.threshold else "—" }}</td>
+  <td>{{ p.exhaustion_time if p.exhaustion_time else "—" }}</td>
+  </tr>
+  {% endfor %}
+  {% if not predictions %}
+  <tr><td colspan="5" style="color:#8b949e">No predictions available yet.</td></tr>
+  {% endif %}
+  </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

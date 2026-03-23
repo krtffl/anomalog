@@ -72,3 +72,36 @@ async def alerts_page(request: Request) -> HTMLResponse:
             "anomalies": anomalies,
         },
     )
+
+
+@router.get("/capacity", response_class=HTMLResponse)
+async def capacity_page(request: Request) -> HTMLResponse:
+    state = request.app.state.extra
+    pro_enabled = state.get("pro_enabled", False)
+    return templates.TemplateResponse(
+        request, "capacity.html", {"pro_enabled": pro_enabled}
+    )
+
+
+@router.get("/correlation", response_class=HTMLResponse)
+async def correlation_page(request: Request) -> HTMLResponse:
+    state = request.app.state.extra
+    duck = state.get("duck")
+    pro_enabled = state.get("pro_enabled", False)
+    events = duck.get_correlated_events(limit=50) if duck and pro_enabled else []
+    return templates.TemplateResponse(
+        request, "correlation.html", {"pro_enabled": pro_enabled, "events": events}
+    )
+
+
+@router.get("/predictions", response_class=HTMLResponse)
+async def predictions_page(request: Request) -> HTMLResponse:
+    state = request.app.state.extra
+    duck = state.get("duck")
+    pro_enabled = state.get("pro_enabled", False)
+    predictions = duck.get_predictions(limit=50) if duck and pro_enabled else []
+    return templates.TemplateResponse(
+        request,
+        "predictions.html",
+        {"pro_enabled": pro_enabled, "predictions": predictions},
+    )

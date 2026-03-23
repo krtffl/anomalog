@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import structlog
@@ -73,6 +74,23 @@ def create_app(config: AnomalogConfig) -> FastAPI:
                 except Exception:
                     logger.warning("baseline_load_failed", source=src.name)
 
+        # --- Pro features ---
+        pro_enabled = False
+        if config.license_path:
+            from anomalog.pro.license import LicenseValidator
+
+            license_validator = LicenseValidator(config.license_path)
+            state["license"] = license_validator
+            pro_enabled = license_validator.is_valid
+            logger.info("pro_license_checked", valid=pro_enabled)
+        state["pro_enabled"] = pro_enabled
+
+        # Configure OTel receiver if pro enabled
+        if pro_enabled:
+            from anomalog.ingest import otel_receiver
+
+            otel_receiver.configure(duck)
+
         # Start scheduler for periodic detection + training
         scheduler = AsyncIOScheduler()
 
@@ -113,10 +131,107 @@ def create_app(config: AnomalogConfig) -> FastAPI:
 
         scheduler.add_job(detection_cycle, "interval", minutes=5, id="detection")
         scheduler.add_job(training_cycle, "interval", hours=6, id="training")
+
+        # Pro scheduler jobs
+        if pro_enabled:
+            # Prometheus scraping
+            if config.metrics.targets:
+                from anomalog.ingest.prometheus_scraper import scrape_target
+
+                async def prometheus_scrape_cycle():
+                    for target in config.metrics.targets:
+                        samples = await scrape_target(
+                            target,
+                            config.metrics.include_patterns,
+                            config.metrics.exclude_patterns,
+                        )
+                        if samples:
+                            duck.insert_metric_samples(samples)
+                            logger.debug(
+                                "prometheus_scraped",
+                                target=target.name,
+                                samples=len(samples),
+                            )
+
+                scheduler.add_job(
+                    prometheus_scrape_cycle,
+                    "interval",
+                    seconds=min(
+                        t.scrape_interval for t in config.metrics.targets
+                    ),
+                    id="prometheus_scrape",
+                )
+
+            # Prediction retraining
+            if config.predictions.enabled:
+                from anomalog.prediction.model_manager import train_and_store
+
+                async def prediction_retrain_cycle():
+                    metric_names = duck.get_metric_names()
+                    since = datetime.now(timezone.utc) - timedelta(days=7)
+                    for name in metric_names:
+                        samples = duck.get_recent_metrics(name, since=since)
+                        if samples:
+                            # Use labels_hash from first sample as representative
+                            labels_hash = samples[0].get("labels_hash", "default")
+                            train_and_store(
+                                name, labels_hash, samples, config.predictions, duck
+                            )
+
+                scheduler.add_job(
+                    prediction_retrain_cycle,
+                    "interval",
+                    seconds=config.predictions.retrain_interval,
+                    id="prediction_retrain",
+                )
+
+            # Correlation engine
+            if config.correlation.enabled:
+                from anomalog.correlation.engine import find_correlations
+
+                async def correlation_cycle():
+                    since = datetime.now(timezone.utc) - timedelta(
+                        seconds=config.correlation.window_seconds * 2
+                    )
+                    log_anomalies = duck.get_recent_anomalies(limit=100)
+                    # Filter to recent ones
+                    recent_log = [
+                        a for a in log_anomalies
+                        if isinstance(a.get("detected_at"), datetime)
+                        and a["detected_at"] >= since
+                    ]
+                    metric_anomalies = duck.get_recent_anomalies(limit=100)
+                    recent_metric = [
+                        a for a in metric_anomalies
+                        if isinstance(a.get("detected_at"), datetime)
+                        and a["detected_at"] >= since
+                    ]
+
+                    if recent_log and recent_metric:
+                        results = find_correlations(
+                            recent_log,
+                            recent_metric,
+                            window_seconds=config.correlation.window_seconds,
+                            min_confidence=config.correlation.min_confidence,
+                        )
+                        for event in results:
+                            duck.insert_correlated_event(event)
+
+                scheduler.add_job(
+                    correlation_cycle,
+                    "interval",
+                    seconds=config.correlation.check_interval,
+                    id="correlation_check",
+                )
+
         scheduler.start()
         state["scheduler"] = scheduler
 
-        logger.info("anomalog_started", sources=len(config.sources))
+        logger.info(
+            "anomalog_started",
+            sources=len(config.sources),
+            pro_enabled=pro_enabled,
+        )
 
         yield  # --- App running ---
 
@@ -144,6 +259,11 @@ def create_app(config: AnomalogConfig) -> FastAPI:
     app.include_router(http_ingest.router)
     app.include_router(loki_ingest.router)
 
+    # OTel receiver (always mount, handler checks pro_enabled at runtime)
+    from anomalog.ingest import otel_receiver
+
+    app.include_router(otel_receiver.router)
+
     # Dashboard routes (import here to avoid circular imports)
     from anomalog.dashboard.routes import router as dashboard_router
     from anomalog.dashboard.api import router as api_router
@@ -160,6 +280,12 @@ def create_app(config: AnomalogConfig) -> FastAPI:
     async def healthz():
         sources = len(config.sources)
         models_healthy = len(state.get("baselines", {}))
-        return {"status": "ok", "sources": sources, "models_healthy": models_healthy}
+        pro = state.get("pro_enabled", False)
+        return {
+            "status": "ok",
+            "sources": sources,
+            "models_healthy": models_healthy,
+            "pro_enabled": pro,
+        }
 
     return app

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Correlación{% endblock %}
+{% block content %}
+<h2>Eventos correlacionados</h2>
+{% if not pro_enabled %}
+<div class="card" style="border-color: #9e6a03;">
+  <p>La correlación de eventos requiere una licencia Pro.</p>
+</div>
+{% else %}
+<div hx-get="/api/correlated-events?limit=50" hx-trigger="load, every 60s" hx-swap="innerHTML">
+  <table>
+  <thead>
+  <tr><th>Detected</th><th>Log Event</th><th>Metric Event</th><th>Delta (s)</th><th>Confidence</th></tr>
+  </thead>
+  <tbody>
+  {% for e in events %}
+  <tr>
+  <td>{{ e.detected_at }}</td>
+  <td><code>{{ e.log_event_id }}</code></td>
+  <td><code>{{ e.metric_event_id }}</code></td>
+  <td>{{ "%.1f"|format(e.time_delta_sec) }}</td>
+  <td>{{ "%.2f"|format(e.confidence) }}</td>
+  </tr>
+  {% endfor %}
+  {% if not events %}
+  <tr><td colspan="5" style="color:#8b949e">No correlated events yet.</td></tr>
+  {% endif %}
+  </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
