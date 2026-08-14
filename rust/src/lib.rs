@@ -1,10 +1,9 @@
 //! PyO3 bridge to logmole-core for fast log parsing and Drain template extraction.
 
-use std::collections::HashMap;
-
 use logmole_core::ParserRegistry;
 use logmole_core::analysis::DrainTree as RustDrainTree;
 use logmole_core::record::{Format, Value};
+use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -21,13 +20,14 @@ fn detect_format(lines: Vec<String>) -> String {
 ///
 /// The returned dict has keys: timestamp, level, message, fields, format, line_number.
 #[pyfunction]
+#[pyo3(signature = (line, format_hint=None))]
 fn parse_line(py: Python<'_>, line: &str, format_hint: Option<&str>) -> PyResult<Option<PyObject>> {
     let registry = ParserRegistry::new();
 
     let format = match format_hint {
         Some(hint) => hint
             .parse::<Format>()
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))?,
+            .map_err(pyo3::exceptions::PyValueError::new_err)?,
         None => {
             let sample = [line];
             registry.detect(&sample)
@@ -54,10 +54,10 @@ fn parse_line(py: Python<'_>, line: &str, format_hint: Option<&str>) -> PyResult
     let fields = PyDict::new(py);
     for (key, value) in &record.fields {
         let py_val: PyObject = match value {
-            Value::Str(s) => s.into_py(py),
-            Value::Int(i) => i.into_py(py),
-            Value::Float(f) => f.into_py(py),
-            Value::Bool(b) => b.into_py(py),
+            Value::Str(s) => s.into_py_any(py)?,
+            Value::Int(i) => i.into_py_any(py)?,
+            Value::Float(f) => f.into_py_any(py)?,
+            Value::Bool(b) => b.into_py_any(py)?,
             Value::Null => py.None(),
         };
         fields.set_item(*key, py_val)?;
@@ -75,6 +75,7 @@ fn parse_line(py: Python<'_>, line: &str, format_hint: Option<&str>) -> PyResult
 
 /// Parse multiple log lines and return a list of dicts for successfully parsed lines.
 #[pyfunction]
+#[pyo3(signature = (lines, format_hint=None))]
 fn parse_lines(
     py: Python<'_>,
     lines: Vec<String>,
@@ -85,7 +86,7 @@ fn parse_lines(
     let format = match format_hint {
         Some(hint) => hint
             .parse::<Format>()
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))?,
+            .map_err(pyo3::exceptions::PyValueError::new_err)?,
         None => {
             let refs: Vec<&str> = lines.iter().take(10).map(String::as_str).collect();
             registry.detect(&refs)
@@ -108,10 +109,10 @@ fn parse_lines(
         let fields = PyDict::new(py);
         for (key, value) in &record.fields {
             let py_val: PyObject = match value {
-                Value::Str(s) => s.into_py(py),
-                Value::Int(i) => i.into_py(py),
-                Value::Float(f) => f.into_py(py),
-                Value::Bool(b) => b.into_py(py),
+                Value::Str(s) => s.into_py_any(py)?,
+                Value::Int(i) => i.into_py_any(py)?,
+                Value::Float(f) => f.into_py_any(py)?,
+                Value::Bool(b) => b.into_py_any(py)?,
                 Value::Null => py.None(),
             };
             fields.set_item(*key, py_val)?;
