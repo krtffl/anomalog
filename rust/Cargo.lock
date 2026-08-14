@@ -241,6 +241,7 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 [[package]]
 name = "logmole-core"
 version = "0.1.0"
+source = "git+https://github.com/krtffl/logmole?rev=ea7ac378a5b31803dd9174edaa3bdf136e3e59c5#ea7ac378a5b31803dd9174edaa3bdf136e3e59c5"
 dependencies = [
  "chrono",
  "hdrhistogram",

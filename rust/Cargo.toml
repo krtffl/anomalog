@@ -9,5 +9,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.23", features = ["extension-module"] }
-logmole-core = { path = "/home/krtffl/Documents/logmole/logmole-core" }
+logmole-core = { git = "https://github.com/krtffl/logmole", rev = "ea7ac378a5b31803dd9174edaa3bdf136e3e59c5" }
 serde_json = "1"

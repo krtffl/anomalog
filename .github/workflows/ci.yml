@@ -15,10 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: krtffl/logmole
-          path: logmole
       - uses: dtolnay/rust-toolchain@stable
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --dev
@@ -28,10 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: krtffl/logmole
-          path: logmole
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt

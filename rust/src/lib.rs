@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
+use logmole_core::ParserRegistry;
 use logmole_core::analysis::DrainTree as RustDrainTree;
 use logmole_core::record::{Format, Value};
-use logmole_core::ParserRegistry;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -42,10 +42,7 @@ fn parse_line(py: Python<'_>, line: &str, format_hint: Option<&str>) -> PyResult
     let dict = PyDict::new(py);
 
     // Timestamp as ISO 8601 string
-    dict.set_item(
-        "timestamp",
-        record.timestamp.map(|ts| ts.to_rfc3339()),
-    )?;
+    dict.set_item("timestamp", record.timestamp.map(|ts| ts.to_rfc3339()))?;
 
     // Level as lowercase string
     dict.set_item("level", record.level.map(|l| l.as_str()))?;
