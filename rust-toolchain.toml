@@ -1,0 +1,18 @@
+# Pin the toolchain instead of tracking whatever `stable` resolves to that day.
+#
+# CI runs `dtolnay/rust-toolchain@stable` with `cargo clippy -- -D warnings`, so
+# a new stable can turn this repo red with zero source changes. That is not
+# hypothetical: 1.97 did exactly that to mcp-servers, stintlab and tablero
+# (duration_suboptimal_units, unnecessary_trailing_comma — flagging commas
+# rustfmt itself had left — and map_unwrap_or extended to Result). This crate is
+# clean under 1.97.1 today; the pin is what keeps it that way.
+#
+# The pin also covers the `test` job, which builds the extension through maturin
+# (manifest-path = rust/Cargo.toml): rustup walks up from rust/ and finds this
+# file at the repository root.
+#
+# `rustup default` (which the action sets) loses to this file, so the pin holds
+# even though the workflow still says @stable.
+[toolchain]
+channel = "1.97.1"
+components = ["clippy", "rustfmt"]
