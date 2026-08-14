@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from fastapi.testclient import TestClient
 
-from anomalog.config import AnomalogConfig
 from anomalog.server import create_app
+
+if TYPE_CHECKING:
+    from anomalog.config import AnomalogConfig
 
 
 class TestHealthz:

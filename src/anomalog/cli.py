@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from pathlib import Path
 
 import click
@@ -57,11 +58,12 @@ def check_config(config: str) -> None:
     try:
         cfg = load_config(Path(config))
         click.echo(
-            f"Configuration valid: {len(cfg.sources)} source(s), {len(cfg.alerts)} alert channel(s)"
+            f"Configuration valid: {len(cfg.sources)} source(s), "
+            f"{len(cfg.alerts)} alert channel(s)"
         )
     except Exception as e:
         click.echo(f"Configuration error: {e}", err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
 
 @main.command()
@@ -141,14 +143,14 @@ def predict(config: str, metric: str) -> None:
     """Manually trigger prediction for a metric."""
     cfg = load_config(Path(config))
 
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from anomalog.prediction.model_manager import train_and_store
     from anomalog.storage.duckdb import DuckDBStorage
 
     duck = DuckDBStorage(cfg.storage.duckdb_path)
     try:
-        since = datetime.now(timezone.utc) - timedelta(days=7)
+        since = datetime.now(UTC) - timedelta(days=7)
         samples = duck.get_recent_metrics(metric, since=since)
         if not samples:
             click.echo(f"No metric data found for '{metric}'", err=True)
@@ -158,8 +160,7 @@ def predict(config: str, metric: str) -> None:
         result = train_and_store(metric, labels_hash, samples, cfg.predictions, duck)
         if result:
             click.echo(
-                f"Prediction complete: model={result['model_type']}, "
-                f"RMSE={result['rmse']:.4f}"
+                f"Prediction complete: model={result['model_type']}, RMSE={result['rmse']:.4f}"
             )
         else:
             click.echo("Prediction failed: insufficient data", err=True)

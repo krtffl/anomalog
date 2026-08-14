@@ -15,23 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: krtffl/logmole
-          path: logmole
       - uses: dtolnay/rust-toolchain@stable
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --dev
+      # tests/test_prediction.py exercises the `pro` extra (statsforecast /
+      # statsmodels) and does not guard on its absence, so CI must install it.
+      - run: uv sync --dev --extra pro
       - run: uv run pytest tests/ -v --tb=short
 
   rust:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: krtffl/logmole
-          path: logmole
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt

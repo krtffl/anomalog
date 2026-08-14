@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 import structlog
 
-from anomalog.config import SourceConfig
 from anomalog.ml.baseline import BaselineModel, _extract_latencies
 from anomalog.ml.error_rate import detect_error_rate_spike
 from anomalog.ml.frequency import detect_frequency_deviations
 from anomalog.ml.latency import detect_latency_shift
 from anomalog.ml.novel import detect_novel_patterns
-from anomalog.storage.duckdb import DuckDBStorage
-from anomalog.types import Anomaly
+
+if TYPE_CHECKING:
+    from anomalog.config import SourceConfig
+    from anomalog.storage.duckdb import DuckDBStorage
+    from anomalog.types import Anomaly
 
 logger = structlog.get_logger(__name__)
 
@@ -29,7 +32,7 @@ def run_detection(
     Returns list of detected anomalies.
     """
     anomalies: list[Anomaly] = []
-    since = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
+    since = datetime.now(UTC) - timedelta(minutes=window_minutes)
     recent_logs = duck.get_recent_logs(source_config.name, since, limit=50_000)
 
     if not recent_logs:
@@ -41,14 +44,10 @@ def run_detection(
     # 1. Error rate spike
     if "error_rate_spike" in enabled:
         total = len(recent_logs)
-        errors = sum(
-            1 for log in recent_logs if log.get("level") in ("error", "fatal")
-        )
+        errors = sum(1 for log in recent_logs if log.get("level") in ("error", "fatal"))
         current_rate = errors / total if total > 0 else 0.0
 
-        anomaly = detect_error_rate_spike(
-            current_rate, baseline, sensitivity, window_minutes
-        )
+        anomaly = detect_error_rate_spike(current_rate, baseline, sensitivity, window_minutes)
         if anomaly:
             anomaly.sample_lines = [
                 log.get("message", "")
@@ -72,9 +71,7 @@ def run_detection(
     if "latency_shift" in enabled:
         current_latencies = _extract_latencies(recent_logs)
         if current_latencies:
-            anomaly = detect_latency_shift(
-                current_latencies, baseline, window_minutes=15
-            )
+            anomaly = detect_latency_shift(current_latencies, baseline, window_minutes=15)
             if anomaly:
                 anomalies.append(anomaly)
 
@@ -93,9 +90,7 @@ def run_detection(
             else {}
         )
 
-        freq_anomalies = detect_frequency_deviations(
-            current_frequencies, baseline, sensitivity
-        )
+        freq_anomalies = detect_frequency_deviations(current_frequencies, baseline, sensitivity)
         anomalies.extend(freq_anomalies)
 
     if anomalies:

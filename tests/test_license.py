@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -70,7 +70,7 @@ class TestValidLicense:
     def test_expires_at_set(self, valid_license_path) -> None:
         validator = LicenseValidator(valid_license_path)
         assert validator.expires_at is not None
-        assert validator.expires_at > datetime.now(timezone.utc)
+        assert validator.expires_at > datetime.now(UTC)
 
 
 class TestExpiredLicense:

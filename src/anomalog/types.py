@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
+from enum import StrEnum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
-class LogLevel(str, Enum):
+class LogLevel(StrEnum):
     TRACE = "trace"
     DEBUG = "debug"
     INFO = "info"
@@ -16,14 +19,14 @@ class LogLevel(str, Enum):
     FATAL = "fatal"
 
 
-class AnomalyType(str, Enum):
+class AnomalyType(StrEnum):
     ERROR_RATE_SPIKE = "error_rate_spike"
     NOVEL_PATTERN = "novel_pattern"
     LATENCY_SHIFT = "latency_shift"
     FREQUENCY_DEVIATION = "frequency_deviation"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

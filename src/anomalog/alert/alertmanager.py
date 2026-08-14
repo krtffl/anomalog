@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import httpx
 import structlog
 
-from anomalog.types import Anomaly
+if TYPE_CHECKING:
+    from anomalog.types import Anomaly
 
 logger = structlog.get_logger(__name__)
 

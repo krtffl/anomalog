@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import structlog
@@ -60,7 +60,7 @@ class LicenseValidator:
             logger.error("license_invalid_expiry")
             return
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if self.expires_at < now:
             grace_end = self.expires_at + timedelta(days=_GRACE_DAYS)
             if now < grace_end:
@@ -94,10 +94,8 @@ def generate_license(
         "customer_email": customer_email,
         "plan": "pro",
         "max_servers": max_servers,
-        "issued_at": datetime.now(timezone.utc).isoformat(),
-        "expires_at": (
-            datetime.now(timezone.utc) + timedelta(days=days_valid)
-        ).isoformat(),
+        "issued_at": datetime.now(UTC).isoformat(),
+        "expires_at": (datetime.now(UTC) + timedelta(days=days_valid)).isoformat(),
         "features": features,
     }
     payload = json.dumps(data, sort_keys=True).encode()

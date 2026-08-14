@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import duckdb
 import structlog
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 logger = structlog.get_logger(__name__)
 
@@ -120,7 +123,8 @@ class DuckDBStorage:
         if not logs:
             return
         self.conn.executemany(
-            """INSERT INTO logs (timestamp, source, level, message, template_id, fields, line_number)
+            """INSERT INTO logs
+                   (timestamp, source, level, message, template_id, fields, line_number)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             [
                 (
@@ -157,9 +161,7 @@ class DuckDBStorage:
             ],
         )
 
-    def get_recent_logs(
-        self, source: str, since: datetime, limit: int = 10000
-    ) -> list[dict]:
+    def get_recent_logs(self, source: str, since: datetime, limit: int = 10000) -> list[dict]:
         """Get recent logs for a source since a given timestamp."""
         result = self.conn.execute(
             """SELECT timestamp, source, level, message, template_id, fields, line_number
@@ -167,11 +169,9 @@ class DuckDBStorage:
             [source, since, limit],
         )
         columns = [desc[0] for desc in result.description]
-        return [dict(zip(columns, row)) for row in result.fetchall()]
+        return [dict(zip(columns, row, strict=False)) for row in result.fetchall()]
 
-    def get_recent_anomalies(
-        self, source: str | None = None, limit: int = 100
-    ) -> list[dict]:
+    def get_recent_anomalies(self, source: str | None = None, limit: int = 100) -> list[dict]:
         """Get recent anomalies, optionally filtered by source."""
         if source:
             result = self.conn.execute(
@@ -183,11 +183,9 @@ class DuckDBStorage:
                 "SELECT * FROM anomalies ORDER BY detected_at DESC LIMIT ?", [limit]
             )
         columns = [desc[0] for desc in result.description]
-        return [dict(zip(columns, row)) for row in result.fetchall()]
+        return [dict(zip(columns, row, strict=False)) for row in result.fetchall()]
 
-    def get_error_rate(
-        self, source: str, since: datetime, bucket_minutes: int = 5
-    ) -> list[dict]:
+    def get_error_rate(self, source: str, since: datetime, bucket_minutes: int = 5) -> list[dict]:
         """Get error rate per time bucket."""
         interval = f"{int(bucket_minutes)} MINUTE"
         result = self.conn.execute(
@@ -203,7 +201,7 @@ class DuckDBStorage:
             [source, since],
         )
         columns = [desc[0] for desc in result.description]
-        return [dict(zip(columns, row)) for row in result.fetchall()]
+        return [dict(zip(columns, row, strict=False)) for row in result.fetchall()]
 
     def delete_old_logs(self, retention_days: int) -> int:
         """Delete logs older than retention period. Returns count deleted."""
@@ -240,9 +238,7 @@ class DuckDBStorage:
             ],
         )
 
-    def get_recent_metrics(
-        self, name: str, since: datetime, limit: int = 10000
-    ) -> list[dict]:
+    def get_recent_metrics(self, name: str, since: datetime, limit: int = 10000) -> list[dict]:
         """Get recent metric samples by name since a given timestamp."""
         result = self.conn.execute(
             """SELECT name, labels_hash, labels, value, timestamp, metric_type, source
@@ -253,7 +249,7 @@ class DuckDBStorage:
             [name, since, limit],
         )
         columns = [desc[0] for desc in result.description]
-        return [dict(zip(columns, row)) for row in result.fetchall()]
+        return [dict(zip(columns, row, strict=False)) for row in result.fetchall()]
 
     def get_metric_names(self) -> list[str]:
         """Return distinct metric names."""
@@ -283,9 +279,7 @@ class DuckDBStorage:
             ],
         )
 
-    def get_predictions(
-        self, metric_name: str | None = None, limit: int = 50
-    ) -> list[dict]:
+    def get_predictions(self, metric_name: str | None = None, limit: int = 50) -> list[dict]:
         """Get predictions, optionally filtered by metric name."""
         if metric_name:
             result = self.conn.execute(
@@ -300,7 +294,7 @@ class DuckDBStorage:
                 [limit],
             )
         columns = [desc[0] for desc in result.description]
-        return [dict(zip(columns, row)) for row in result.fetchall()]
+        return [dict(zip(columns, row, strict=False)) for row in result.fetchall()]
 
     def save_prediction_model(
         self,
@@ -335,7 +329,7 @@ class DuckDBStorage:
         rows = result.fetchall()
         if not rows:
             return None
-        return dict(zip(columns, rows[0]))
+        return dict(zip(columns, rows[0], strict=False))
 
     # --- Correlated events ---
 
@@ -355,9 +349,7 @@ class DuckDBStorage:
             ],
         )
 
-    def get_correlated_events(
-        self, since: datetime | None = None, limit: int = 100
-    ) -> list[dict]:
+    def get_correlated_events(self, since: datetime | None = None, limit: int = 100) -> list[dict]:
         """Get correlated events, optionally since a given timestamp."""
         if since:
             result = self.conn.execute(
@@ -372,7 +364,7 @@ class DuckDBStorage:
                 [limit],
             )
         columns = [desc[0] for desc in result.description]
-        return [dict(zip(columns, row)) for row in result.fetchall()]
+        return [dict(zip(columns, row, strict=False)) for row in result.fetchall()]
 
     def close(self) -> None:
         self.conn.close()

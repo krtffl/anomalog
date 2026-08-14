@@ -1,9 +1,12 @@
-"""SQLite storage for operational state (drain state, file offsets, alert cooldowns, model metadata)."""
+"""SQLite storage for operational state.
+
+Drain state, file offsets, alert cooldowns and model metadata.
+"""
 
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import structlog
@@ -61,7 +64,7 @@ class SQLiteStorage:
     def set_file_offset(
         self, source: str, path: str, offset: int, inode: int | None = None
     ) -> None:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         self.conn.execute(
             """INSERT INTO file_offsets (source, path, offset, inode, updated_at)
                VALUES (?, ?, ?, ?, ?)
@@ -82,7 +85,7 @@ class SQLiteStorage:
         ).fetchone()
         if row is None:
             return False
-        return datetime.fromisoformat(row["expires_at"]) > datetime.now(timezone.utc)
+        return datetime.fromisoformat(row["expires_at"]) > datetime.now(UTC)
 
     def set_cooldown(
         self,
@@ -109,7 +112,7 @@ class SQLiteStorage:
     def cleanup_expired_cooldowns(self) -> None:
         self.conn.execute(
             "DELETE FROM alert_cooldowns WHERE expires_at < ?",
-            (datetime.now(timezone.utc).isoformat(),),
+            (datetime.now(UTC).isoformat(),),
         )
         self.conn.commit()
 

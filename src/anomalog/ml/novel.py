@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from anomalog.ml.baseline import BaselineModel
 from anomalog.types import Anomaly, AnomalyType, Severity
+
+if TYPE_CHECKING:
+    from anomalog.ml.baseline import BaselineModel
 
 
 def detect_novel_patterns(
@@ -36,7 +39,7 @@ def detect_novel_patterns(
                 severity=severity,
                 score=score,
                 source=baseline.source,
-                detected_at=datetime.now(timezone.utc),
+                detected_at=datetime.now(UTC),
                 description=(
                     f"Novel log pattern detected "
                     f"(template_id={template_id}, seen {count} times, not in baseline)"

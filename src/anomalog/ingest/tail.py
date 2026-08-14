@@ -5,13 +5,15 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
 from watchdog.events import FileModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from anomalog.ingest.router import IngestionRouter
-from anomalog.storage.sqlite import SQLiteStorage
+if TYPE_CHECKING:
+    from anomalog.ingest.router import IngestionRouter
+    from anomalog.storage.sqlite import SQLiteStorage
 
 logger = structlog.get_logger(__name__)
 
@@ -49,9 +51,7 @@ class LogFileTailer(FileSystemEventHandler):
         # Detect log rotation (inode changed)
         current_inode = self._get_inode()
         if current_inode != self._inode:
-            logger.info(
-                "log_rotation_detected", source=self.source_name, path=self.file_path
-            )
+            logger.info("log_rotation_detected", source=self.source_name, path=self.file_path)
             self.offset = 0
             self._inode = current_inode
 
@@ -74,9 +74,7 @@ class LogFileTailer(FileSystemEventHandler):
                 )
 
         # Persist offset
-        self.sqlite.set_file_offset(
-            self.source_name, self.file_path, self.offset, current_inode
-        )
+        self.sqlite.set_file_offset(self.source_name, self.file_path, self.offset, current_inode)
 
 
 def start_file_tailer(

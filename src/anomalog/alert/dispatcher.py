@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 import structlog
 
 from anomalog.alert import alertmanager, email, slack, telegram
-from anomalog.config import AlertChannelConfig
-from anomalog.storage.sqlite import SQLiteStorage
 from anomalog.types import Anomaly, Severity
+
+if TYPE_CHECKING:
+    from anomalog.config import AlertChannelConfig
+    from anomalog.storage.sqlite import SQLiteStorage
 
 logger = structlog.get_logger(__name__)
 
@@ -41,9 +44,7 @@ async def dispatch_alert(
     # Check cooldown
     template_id = anomaly.context.get("template_id")
     if sqlite.is_in_cooldown(anomaly.source, anomaly.anomaly_type.value, template_id):
-        logger.debug(
-            "alert_in_cooldown", source=anomaly.source, type=anomaly.anomaly_type.value
-        )
+        logger.debug("alert_in_cooldown", source=anomaly.source, type=anomaly.anomaly_type.value)
         return False
 
     # Filter channels by min_severity
@@ -69,10 +70,8 @@ async def dispatch_alert(
 
     # Set cooldown if any channel succeeded
     if successes > 0:
-        expires = datetime.now(timezone.utc) + timedelta(minutes=cooldown_minutes)
-        sqlite.set_cooldown(
-            anomaly.source, anomaly.anomaly_type.value, expires, template_id
-        )
+        expires = datetime.now(UTC) + timedelta(minutes=cooldown_minutes)
+        sqlite.set_cooldown(anomaly.source, anomaly.anomaly_type.value, expires, template_id)
 
     return successes > 0
 

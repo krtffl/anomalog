@@ -19,9 +19,7 @@ class TestRustDetectFormat:
     def test_detects_logfmt(self) -> None:
         from anomalog._rust import detect_format
 
-        result = detect_format(
-            ["time=2026-03-23T10:00:00Z level=info msg=started"]
-        )
+        result = detect_format(["time=2026-03-23T10:00:00Z level=info msg=started"])
         assert result == "logfmt"
 
 

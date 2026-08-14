@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from anomalog.correlation.scorer import compute_confidence
 
@@ -15,7 +15,7 @@ def _get_timestamp(event: dict) -> datetime:
         return datetime.fromisoformat(ts)
     if isinstance(ts, datetime):
         return ts
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _severity_order(severity: str) -> int:
@@ -73,13 +73,15 @@ def find_correlations(
             )
 
             if confidence >= min_confidence:
-                results.append({
-                    "id": str(uuid.uuid4()),
-                    "log_event_id": log_event["id"],
-                    "metric_event_id": metric_event["id"],
-                    "time_delta_sec": time_delta,
-                    "confidence": confidence,
-                    "detected_at": datetime.now(timezone.utc),
-                })
+                results.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "log_event_id": log_event["id"],
+                        "metric_event_id": metric_event["id"],
+                        "time_delta_sec": time_delta,
+                        "confidence": confidence,
+                        "detected_at": datetime.now(UTC),
+                    }
+                )
 
     return results

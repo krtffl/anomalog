@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING
-
 import io
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import joblib
 import structlog
@@ -77,7 +76,7 @@ def train_and_store(
             "predictions_json": predictions,
             "exhaustion_time": None,
             "threshold": None,
-            "predicted_at": datetime.now(timezone.utc),
+            "predicted_at": datetime.now(UTC),
         }
         duck.insert_prediction(pred_dict)
 

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import httpx
 import structlog
 
-from anomalog.types import Anomaly
+if TYPE_CHECKING:
+    from anomalog.types import Anomaly
 
 logger = structlog.get_logger(__name__)
 
@@ -30,9 +33,7 @@ async def send_alert(anomaly: Anomaly, webhook_url: str) -> bool:
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": (
-                                f"anomalog: {anomaly.anomaly_type.value.replace('_', ' ')}"
-                            ),
+                            "text": (f"anomalog: {anomaly.anomaly_type.value.replace('_', ' ')}"),
                         },
                     },
                     {
@@ -62,9 +63,7 @@ async def send_alert(anomaly: Anomaly, webhook_url: str) -> bool:
             if resp.status_code == 200:
                 logger.info("slack_alert_sent", source=anomaly.source)
                 return True
-            logger.error(
-                "slack_alert_failed", status=resp.status_code, body=resp.text[:200]
-            )
+            logger.error("slack_alert_failed", status=resp.status_code, body=resp.text[:200])
             return False
     except httpx.HTTPError as e:
         logger.error("slack_alert_error", error=str(e))

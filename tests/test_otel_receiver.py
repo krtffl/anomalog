@@ -46,9 +46,7 @@ def _make_otlp_payload(
         "resourceMetrics": [
             {
                 "resource": {
-                    "attributes": [
-                        {"key": "service.name", "value": {"stringValue": service_name}}
-                    ]
+                    "attributes": [{"key": "service.name", "value": {"stringValue": service_name}}]
                 },
                 "scopeMetrics": [
                     {
@@ -124,24 +122,18 @@ class TestValidOTLPJson:
             "resourceMetrics": [
                 {
                     "resource": {
-                        "attributes": [
-                            {"key": "service.name", "value": {"stringValue": "svc"}}
-                        ]
+                        "attributes": [{"key": "service.name", "value": {"stringValue": "svc"}}]
                     },
                     "scopeMetrics": [
                         {
                             "metrics": [
                                 {
                                     "name": "metric_a",
-                                    "gauge": {
-                                        "dataPoints": [{"asDouble": 1.0, "attributes": []}]
-                                    },
+                                    "gauge": {"dataPoints": [{"asDouble": 1.0, "attributes": []}]},
                                 },
                                 {
                                     "name": "metric_b",
-                                    "gauge": {
-                                        "dataPoints": [{"asDouble": 2.0, "attributes": []}]
-                                    },
+                                    "gauge": {"dataPoints": [{"asDouble": 2.0, "attributes": []}]},
                                 },
                             ]
                         }
@@ -222,11 +214,7 @@ class TestEmptyPayload:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.post(
                 "/v1/metrics",
-                json={
-                    "resourceMetrics": [
-                        {"resource": {"attributes": []}, "scopeMetrics": []}
-                    ]
-                },
+                json={"resourceMetrics": [{"resource": {"attributes": []}, "scopeMetrics": []}]},
                 headers={"x-api-key": "test-otel-key"},
             )
         assert resp.status_code == 200

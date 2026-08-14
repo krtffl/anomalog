@@ -67,9 +67,7 @@ class TestConfigDefaults:
         assert config.alerts == []
 
     def test_source_defaults(self) -> None:
-        config = AnomalogConfig.model_validate(
-            {"sources": [{"name": "test", "method": "file"}]}
-        )
+        config = AnomalogConfig.model_validate({"sources": [{"name": "test", "method": "file"}]})
         source = config.sources[0]
         assert source.sensitivity == 0.5
         assert source.training_window_hours == 168

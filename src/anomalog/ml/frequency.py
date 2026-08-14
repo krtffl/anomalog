@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from anomalog.ml.baseline import BaselineModel
 from anomalog.types import Anomaly, AnomalyType, Severity
+
+if TYPE_CHECKING:
+    from anomalog.ml.baseline import BaselineModel
 
 
 def detect_frequency_deviations(
@@ -47,7 +50,7 @@ def detect_frequency_deviations(
                 severity=severity,
                 score=score,
                 source=baseline.source,
-                detected_at=datetime.now(timezone.utc),
+                detected_at=datetime.now(UTC),
                 description=(
                     f"Template frequency {direction} "
                     f"({ratio:.1f}x baseline, template_id={template_id})"

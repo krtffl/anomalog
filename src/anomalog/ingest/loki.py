@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-
-from fastapi import APIRouter, HTTPException, Request, Response
+from typing import TYPE_CHECKING
 
 import structlog
+from fastapi import APIRouter, HTTPException, Request, Response
 
-from anomalog.ingest.router import IngestionRouter
+if TYPE_CHECKING:
+    from anomalog.ingest.router import IngestionRouter
 
 logger = structlog.get_logger(__name__)
 

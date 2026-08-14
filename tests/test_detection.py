@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import json
-import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -32,7 +31,7 @@ def _make_baseline(**overrides) -> BaselineModel:
         "template_frequencies": {"tpl-a": 0.5, "tpl-b": 0.3, "tpl-c": 0.2},
         "latency_baseline": np.random.default_rng(42).normal(100, 10, 500),
         "isolation_forest": None,
-        "trained_at": datetime.now(timezone.utc),
+        "trained_at": datetime.now(UTC),
         "lines_trained": 5000,
     }
     defaults.update(overrides)
@@ -230,24 +229,28 @@ class TestBaselineTraining:
         duck = DuckDBStorage(duck_path)
         sqlite = SQLiteStorage(sqlite_path)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         rng = np.random.default_rng(42)
         logs = []
         templates = ["tpl-a", "tpl-b", "tpl-c"]
         for i in range(1500):
             ts = now - timedelta(hours=int(rng.integers(0, 168)))
-            level = rng.choice(["info", "info", "info", "warn", "error"], p=[0.6, 0.15, 0.1, 0.1, 0.05])
+            level = rng.choice(
+                ["info", "info", "info", "warn", "error"], p=[0.6, 0.15, 0.1, 0.1, 0.05]
+            )
             tpl = rng.choice(templates)
             latency = float(rng.normal(100, 15))
-            logs.append({
-                "timestamp": ts,
-                "source": "test-svc",
-                "level": level,
-                "message": f"log message {i}",
-                "template_id": tpl,
-                "fields": json.dumps({"latency": max(0, latency)}),
-                "line_number": i,
-            })
+            logs.append(
+                {
+                    "timestamp": ts,
+                    "source": "test-svc",
+                    "level": level,
+                    "message": f"log message {i}",
+                    "template_id": tpl,
+                    "fields": json.dumps({"latency": max(0, latency)}),
+                    "line_number": i,
+                }
+            )
 
         duck.insert_logs(logs)
 
@@ -297,7 +300,7 @@ class TestBaselineTraining:
         duck = DuckDBStorage(duck_path)
         sqlite = SQLiteStorage(sqlite_path)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         logs = [
             {
                 "timestamp": now - timedelta(hours=1),
@@ -344,18 +347,20 @@ class TestRunDetection:
         )
 
         # Insert anomalous logs: high error rate, novel template, high latency
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         logs = []
         for i in range(200):
-            logs.append({
-                "timestamp": now - timedelta(seconds=i * 2),
-                "source": "my-service",
-                "level": "error",  # All errors -> 100% error rate
-                "message": f"something broke {i}",
-                "template_id": "tpl-novel",  # Novel pattern
-                "fields": json.dumps({"latency": 500.0}),  # High latency
-                "line_number": i,
-            })
+            logs.append(
+                {
+                    "timestamp": now - timedelta(seconds=i * 2),
+                    "source": "my-service",
+                    "level": "error",  # All errors -> 100% error rate
+                    "message": f"something broke {i}",
+                    "template_id": "tpl-novel",  # Novel pattern
+                    "fields": json.dumps({"latency": 500.0}),  # High latency
+                    "line_number": i,
+                }
+            )
         duck.insert_logs(logs)
 
         source_config = SourceConfig(
@@ -429,18 +434,20 @@ class TestRunDetection:
         )
 
         # Insert logs with high latency
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         logs = []
         for i in range(100):
-            logs.append({
-                "timestamp": now - timedelta(seconds=i),
-                "source": "latency-svc",
-                "level": "info",
-                "message": f"request {i}",
-                "template_id": "tpl-a",
-                "fields": json.dumps({"latency": float(rng.normal(300, 30))}),
-                "line_number": i,
-            })
+            logs.append(
+                {
+                    "timestamp": now - timedelta(seconds=i),
+                    "source": "latency-svc",
+                    "level": "info",
+                    "message": f"request {i}",
+                    "template_id": "tpl-a",
+                    "fields": json.dumps({"latency": float(rng.normal(300, 30))}),
+                    "line_number": i,
+                }
+            )
         duck.insert_logs(logs)
 
         source_config = SourceConfig(
@@ -457,9 +464,7 @@ class TestRunDetection:
             window_minutes=5,
         )
 
-        latency_anomalies = [
-            a for a in anomalies if a.anomaly_type == AnomalyType.LATENCY_SHIFT
-        ]
+        latency_anomalies = [a for a in anomalies if a.anomaly_type == AnomalyType.LATENCY_SHIFT]
         assert len(latency_anomalies) == 1
         assert latency_anomalies[0].context["shift_percent"] > 50
 

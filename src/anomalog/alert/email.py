@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from email.mime.text import MIMEText
+from typing import TYPE_CHECKING
 
 import aiosmtplib
 import structlog
 
-from anomalog.types import Anomaly
+if TYPE_CHECKING:
+    from anomalog.types import Anomaly
 
 logger = structlog.get_logger(__name__)
 

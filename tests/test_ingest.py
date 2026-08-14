@@ -51,9 +51,7 @@ async def test_router_processes_and_stores(duck, router):
     await router._flush()
 
     # Verify stored in DuckDB (select non-timestamp columns to avoid pytz dep)
-    result = duck.conn.execute(
-        "SELECT source, level, message, line_number FROM logs"
-    ).fetchall()
+    result = duck.conn.execute("SELECT source, level, message, line_number FROM logs").fetchall()
     assert len(result) == 1
     cols = [
         desc[0]
@@ -61,7 +59,7 @@ async def test_router_processes_and_stores(duck, router):
             "SELECT source, level, message, line_number FROM logs"
         ).description
     ]
-    row = dict(zip(cols, result[0]))
+    row = dict(zip(cols, result[0], strict=False))
     assert row["source"] == "test-src"
     assert row["message"] == "hello world"
     assert row["level"] == "info"

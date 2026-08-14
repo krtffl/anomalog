@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import structlog
 
 from anomalog.parser.bridge import create_drain_tree, parse_line
-from anomalog.storage.duckdb import DuckDBStorage
+
+if TYPE_CHECKING:
+    from anomalog.storage.duckdb import DuckDBStorage
 
 logger = structlog.get_logger(__name__)
 
@@ -29,11 +32,13 @@ class IngestionRouter:
     async def submit(self, raw_line: str, source: str, line_number: int = 0) -> None:
         """Submit a raw log line for processing."""
         try:
-            self.queue.put_nowait({
-                "raw": raw_line,
-                "source": source,
-                "line_number": line_number,
-            })
+            self.queue.put_nowait(
+                {
+                    "raw": raw_line,
+                    "source": source,
+                    "line_number": line_number,
+                }
+            )
         except asyncio.QueueFull:
             logger.warning("ingestion_queue_full", source=source, dropped=True)
 
@@ -45,7 +50,7 @@ class IngestionRouter:
         while self._running:
             try:
                 item = await asyncio.wait_for(self.queue.get(), timeout=1.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Flush any partial batch on idle
                 if self._batch:
                     await self._flush()
@@ -68,8 +73,7 @@ class IngestionRouter:
                 template_id = str(drain.process(parsed["message"]))  # type: ignore[union-attr]
 
             log_entry = {
-                "timestamp": parsed.get("timestamp")
-                or datetime.now(timezone.utc).isoformat(),
+                "timestamp": parsed.get("timestamp") or datetime.now(UTC).isoformat(),
                 "source": source,
                 "level": parsed.get("level"),
                 "message": parsed.get("message"),

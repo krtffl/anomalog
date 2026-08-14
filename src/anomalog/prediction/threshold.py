@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -32,9 +32,9 @@ def check_thresholds(
 
     for ts_iso, predicted_value in predictions:
         crossed = False
-        if direction == "above" and predicted_value >= threshold_value:
-            crossed = True
-        elif direction == "below" and predicted_value <= threshold_value:
+        if (direction == "above" and predicted_value >= threshold_value) or (
+            direction == "below" and predicted_value <= threshold_value
+        ):
             crossed = True
 
         if crossed:
@@ -43,19 +43,21 @@ def check_thresholds(
             except ValueError:
                 exhaustion_time = None
 
-            alerts.append({
-                "metric_name": metric_name,
-                "threshold_value": threshold_value,
-                "direction": direction,
-                "predicted_value": predicted_value,
-                "exhaustion_time": exhaustion_time,
-                "detected_at": datetime.now(timezone.utc),
-                "description": (
-                    f"Metric '{metric_name}' predicted to cross {direction} "
-                    f"threshold {threshold_value} at {ts_iso} "
-                    f"(predicted: {predicted_value:.2f})"
-                ),
-            })
+            alerts.append(
+                {
+                    "metric_name": metric_name,
+                    "threshold_value": threshold_value,
+                    "direction": direction,
+                    "predicted_value": predicted_value,
+                    "exhaustion_time": exhaustion_time,
+                    "detected_at": datetime.now(UTC),
+                    "description": (
+                        f"Metric '{metric_name}' predicted to cross {direction} "
+                        f"threshold {threshold_value} at {ts_iso} "
+                        f"(predicted: {predicted_value:.2f})"
+                    ),
+                }
+            )
             # Only report first crossing per metric
             break
 

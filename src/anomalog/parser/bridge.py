@@ -37,18 +37,14 @@ def detect_format(lines: list[str]) -> str:
     return _python_detect_format(lines)
 
 
-def parse_line(
-    line: str, format_hint: str | None = None
-) -> dict | None:
+def parse_line(line: str, format_hint: str | None = None) -> dict | None:
     """Parse a single log line. Returns dict or None if unparsable."""
     if RUST_AVAILABLE:
         return _rust_parse_line(line, format_hint)
     return _python_parse_line(line, format_hint)
 
 
-def parse_lines(
-    lines: list[str], format_hint: str | None = None
-) -> list[dict]:
+def parse_lines(lines: list[str], format_hint: str | None = None) -> list[dict]:
     """Parse multiple log lines. Returns list of dicts for successful parses."""
     if RUST_AVAILABLE:
         return _rust_parse_lines(lines, format_hint)
