@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import httpx
 import structlog
 
-from anomalog.types import Anomaly
+if TYPE_CHECKING:
+    from anomalog.types import Anomaly
 
 logger = structlog.get_logger(__name__)
 
-SEVERITY_EMOJI = {"low": "\U0001f535", "medium": "\U0001f7e1", "high": "\U0001f7e0", "critical": "\U0001f534"}
+SEVERITY_EMOJI = {
+    "low": "\U0001f535",
+    "medium": "\U0001f7e1",
+    "high": "\U0001f7e0",
+    "critical": "\U0001f534",
+}
 
 
 async def send_alert(
@@ -44,9 +52,7 @@ async def send_alert(
                     type=anomaly.anomaly_type.value,
                 )
                 return True
-            logger.error(
-                "telegram_alert_failed", status=resp.status_code, body=resp.text[:200]
-            )
+            logger.error("telegram_alert_failed", status=resp.status_code, body=resp.text[:200])
             return False
     except httpx.HTTPError as e:
         logger.error("telegram_alert_error", error=str(e))

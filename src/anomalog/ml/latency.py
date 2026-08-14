@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy.stats import ks_2samp
 
-from anomalog.ml.baseline import BaselineModel
 from anomalog.types import Anomaly, AnomalyType, Severity
+
+if TYPE_CHECKING:
+    from anomalog.ml.baseline import BaselineModel
 
 
 def detect_latency_shift(
@@ -63,7 +66,7 @@ def detect_latency_shift(
         severity=severity,
         score=score,
         source=baseline.source,
-        detected_at=datetime.now(timezone.utc),
+        detected_at=datetime.now(UTC),
         description=(
             f"Latency shift detected "
             f"(p99: {baseline_p99:.1f}ms -> {current_p99:.1f}ms, "

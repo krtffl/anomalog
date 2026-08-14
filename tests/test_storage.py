@@ -1,6 +1,6 @@
 """Tests for DuckDB and SQLite storage backends."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from anomalog.storage.duckdb import DuckDBStorage
@@ -12,7 +12,7 @@ class TestDuckDBInsertAndQuery:
         db_path = str(tmp_path / "test.duckdb")
         duck = DuckDBStorage(db_path)
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             logs = [
                 {
                     "timestamp": now,
@@ -48,7 +48,7 @@ class TestDuckDBInsertAndQuery:
         duck = DuckDBStorage(db_path)
         try:
             duck.insert_logs([])  # Should not raise
-            results = duck.get_recent_logs("app", since=datetime.now(timezone.utc))
+            results = duck.get_recent_logs("app", since=datetime.now(UTC))
             assert results == []
         finally:
             duck.close()
@@ -59,7 +59,7 @@ class TestDuckDBAnomalies:
         db_path = str(tmp_path / "test.duckdb")
         duck = DuckDBStorage(db_path)
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             anomaly = {
                 "id": "anom_001",
                 "anomaly_type": "error_rate_spike",
@@ -91,7 +91,7 @@ class TestDuckDBRetention:
         db_path = str(tmp_path / "test.duckdb")
         duck = DuckDBStorage(db_path)
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             logs = [
                 {
                     "timestamp": now,
@@ -154,7 +154,7 @@ class TestSQLiteAlertCooldowns:
         db_path = str(tmp_path / "state.sqlite")
         store = SQLiteStorage(db_path)
         try:
-            future = datetime.now(timezone.utc) + timedelta(hours=1)
+            future = datetime.now(UTC) + timedelta(hours=1)
             store.set_cooldown("app", "error_rate_spike", expires_at=future)
 
             assert store.is_in_cooldown("app", "error_rate_spike") is True
@@ -166,7 +166,7 @@ class TestSQLiteAlertCooldowns:
         db_path = str(tmp_path / "state.sqlite")
         store = SQLiteStorage(db_path)
         try:
-            past = datetime.now(timezone.utc) - timedelta(hours=1)
+            past = datetime.now(UTC) - timedelta(hours=1)
             store.set_cooldown("app", "error_rate_spike", expires_at=past)
 
             assert store.is_in_cooldown("app", "error_rate_spike") is False
@@ -177,8 +177,8 @@ class TestSQLiteAlertCooldowns:
         db_path = str(tmp_path / "state.sqlite")
         store = SQLiteStorage(db_path)
         try:
-            past = datetime.now(timezone.utc) - timedelta(hours=1)
-            future = datetime.now(timezone.utc) + timedelta(hours=1)
+            past = datetime.now(UTC) - timedelta(hours=1)
+            future = datetime.now(UTC) + timedelta(hours=1)
 
             store.set_cooldown("app", "error_rate_spike", expires_at=past)
             store.set_cooldown("app", "novel_pattern", expires_at=future)
@@ -204,8 +204,10 @@ class TestSQLiteModelMetadata:
         db_path = str(tmp_path / "state.sqlite")
         store = SQLiteStorage(db_path)
         try:
-            now = datetime.now(timezone.utc)
-            store.set_model_metadata("app", trained_at=now, lines_trained=5000, model_path="/models/app_v1")
+            now = datetime.now(UTC)
+            store.set_model_metadata(
+                "app", trained_at=now, lines_trained=5000, model_path="/models/app_v1"
+            )
 
             meta = store.get_model_metadata("app")
             assert meta is not None
@@ -220,9 +222,13 @@ class TestSQLiteModelMetadata:
         db_path = str(tmp_path / "state.sqlite")
         store = SQLiteStorage(db_path)
         try:
-            now = datetime.now(timezone.utc)
-            store.set_model_metadata("app", trained_at=now, lines_trained=5000, model_path="/models/v1")
-            store.set_model_metadata("app", trained_at=now, lines_trained=10000, model_path="/models/v2")
+            now = datetime.now(UTC)
+            store.set_model_metadata(
+                "app", trained_at=now, lines_trained=5000, model_path="/models/v1"
+            )
+            store.set_model_metadata(
+                "app", trained_at=now, lines_trained=10000, model_path="/models/v2"
+            )
 
             meta = store.get_model_metadata("app")
             assert meta is not None

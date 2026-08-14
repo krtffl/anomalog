@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
-import pytest
 
 from anomalog.prediction.capacity import MIN_DATA_POINTS, predict, train_model
 from anomalog.prediction.threshold import check_thresholds
@@ -13,7 +12,7 @@ from anomalog.prediction.threshold import check_thresholds
 
 def _make_timestamps(n: int, interval_minutes: int = 5) -> list[datetime]:
     """Generate n timestamps at regular intervals."""
-    start = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    start = datetime(2025, 1, 1, tzinfo=UTC)
     return [start + timedelta(minutes=i * interval_minutes) for i in range(n)]
 
 
@@ -55,8 +54,7 @@ class TestAutoARIMAOnSeasonal:
         timestamps = _make_timestamps(n)
         # Clear seasonal pattern (period ~24 points = 2 hours)
         values = [
-            50.0 + 20.0 * np.sin(2 * np.pi * i / 24) + np.random.normal(0, 1)
-            for i in range(n)
+            50.0 + 20.0 * np.sin(2 * np.pi * i / 24) + np.random.normal(0, 1) for i in range(n)
         ]
 
         result = train_model(timestamps, values, metric_hint="cpu_usage")
@@ -167,7 +165,7 @@ class TestModelSaveLoad:
 
         assert len(original_preds) == len(restored_preds)
         # Values should be identical (same model)
-        for (_, v1), (_, v2) in zip(original_preds, restored_preds):
+        for (_, v1), (_, v2) in zip(original_preds, restored_preds, strict=False):
             assert abs(v1 - v2) < 1e-6
 
         duck.close()

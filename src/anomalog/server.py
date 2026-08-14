@@ -4,24 +4,27 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from anomalog.config import AnomalogConfig
+from anomalog.alert.dispatcher import dispatch_alert
 from anomalog.ingest import http as http_ingest
 from anomalog.ingest import loki as loki_ingest
 from anomalog.ingest.router import IngestionRouter
 from anomalog.ingest.tail import start_file_tailer
 from anomalog.ml.baseline import BaselineModel, train_baseline
 from anomalog.ml.detector import run_detection
-from anomalog.alert.dispatcher import dispatch_alert
 from anomalog.storage.duckdb import DuckDBStorage
 from anomalog.storage.sqlite import SQLiteStorage
+
+if TYPE_CHECKING:
+    from anomalog.config import AnomalogConfig
 
 logger = structlog.get_logger(__name__)
 
@@ -101,18 +104,20 @@ def create_app(config: AnomalogConfig) -> FastAPI:
                     continue
                 anomalies = run_detection(src, baseline, duck)
                 for anomaly in anomalies:
-                    duck.insert_anomaly({
-                        "id": anomaly.id,
-                        "anomaly_type": anomaly.anomaly_type.value,
-                        "severity": anomaly.severity.value,
-                        "score": anomaly.score,
-                        "source": anomaly.source,
-                        "detected_at": anomaly.detected_at,
-                        "description": anomaly.description,
-                        "context": anomaly.context,
-                        "sample_lines": anomaly.sample_lines,
-                        "alerted": False,
-                    })
+                    duck.insert_anomaly(
+                        {
+                            "id": anomaly.id,
+                            "anomaly_type": anomaly.anomaly_type.value,
+                            "severity": anomaly.severity.value,
+                            "score": anomaly.score,
+                            "source": anomaly.source,
+                            "detected_at": anomaly.detected_at,
+                            "description": anomaly.description,
+                            "context": anomaly.context,
+                            "sample_lines": anomaly.sample_lines,
+                            "alerted": False,
+                        }
+                    )
                     await dispatch_alert(
                         anomaly, config.alerts, sqlite, config.alert_cooldown_minutes
                     )
@@ -156,9 +161,7 @@ def create_app(config: AnomalogConfig) -> FastAPI:
                 scheduler.add_job(
                     prometheus_scrape_cycle,
                     "interval",
-                    seconds=min(
-                        t.scrape_interval for t in config.metrics.targets
-                    ),
+                    seconds=min(t.scrape_interval for t in config.metrics.targets),
                     id="prometheus_scrape",
                 )
 
@@ -168,15 +171,13 @@ def create_app(config: AnomalogConfig) -> FastAPI:
 
                 async def prediction_retrain_cycle():
                     metric_names = duck.get_metric_names()
-                    since = datetime.now(timezone.utc) - timedelta(days=7)
+                    since = datetime.now(UTC) - timedelta(days=7)
                     for name in metric_names:
                         samples = duck.get_recent_metrics(name, since=since)
                         if samples:
                             # Use labels_hash from first sample as representative
                             labels_hash = samples[0].get("labels_hash", "default")
-                            train_and_store(
-                                name, labels_hash, samples, config.predictions, duck
-                            )
+                            train_and_store(name, labels_hash, samples, config.predictions, duck)
 
                 scheduler.add_job(
                     prediction_retrain_cycle,
@@ -190,21 +191,21 @@ def create_app(config: AnomalogConfig) -> FastAPI:
                 from anomalog.correlation.engine import find_correlations
 
                 async def correlation_cycle():
-                    since = datetime.now(timezone.utc) - timedelta(
+                    since = datetime.now(UTC) - timedelta(
                         seconds=config.correlation.window_seconds * 2
                     )
                     log_anomalies = duck.get_recent_anomalies(limit=100)
                     # Filter to recent ones
                     recent_log = [
-                        a for a in log_anomalies
-                        if isinstance(a.get("detected_at"), datetime)
-                        and a["detected_at"] >= since
+                        a
+                        for a in log_anomalies
+                        if isinstance(a.get("detected_at"), datetime) and a["detected_at"] >= since
                     ]
                     metric_anomalies = duck.get_recent_anomalies(limit=100)
                     recent_metric = [
-                        a for a in metric_anomalies
-                        if isinstance(a.get("detected_at"), datetime)
-                        and a["detected_at"] >= since
+                        a
+                        for a in metric_anomalies
+                        if isinstance(a.get("detected_at"), datetime) and a["detected_at"] >= since
                     ]
 
                     if recent_log and recent_metric:
@@ -265,8 +266,8 @@ def create_app(config: AnomalogConfig) -> FastAPI:
     app.include_router(otel_receiver.router)
 
     # Dashboard routes (import here to avoid circular imports)
-    from anomalog.dashboard.routes import router as dashboard_router
     from anomalog.dashboard.api import router as api_router
+    from anomalog.dashboard.routes import router as dashboard_router
 
     app.include_router(dashboard_router)
     app.include_router(api_router)

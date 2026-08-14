@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from anomalog.correlation.engine import find_correlations
 from anomalog.correlation.scorer import compute_confidence
@@ -85,7 +85,7 @@ class TestConfidenceDifferentSource:
 
 class TestFindCorrelations:
     def test_known_pairs_detected(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         log_anomalies = [
             {
                 "id": "log-1",
@@ -111,15 +111,23 @@ class TestFindCorrelations:
         assert abs(results[0]["time_delta_sec"] - 10.0) < 0.01
 
     def test_multiple_pairs(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         log_anomalies = [
             {"id": "log-1", "detected_at": now, "source": "app", "severity": "high"},
-            {"id": "log-2", "detected_at": now + timedelta(seconds=5), "source": "app",
-             "severity": "critical"},
+            {
+                "id": "log-2",
+                "detected_at": now + timedelta(seconds=5),
+                "source": "app",
+                "severity": "critical",
+            },
         ]
         metric_anomalies = [
-            {"id": "metric-1", "detected_at": now + timedelta(seconds=2), "source": "app",
-             "severity": "high"},
+            {
+                "id": "metric-1",
+                "detected_at": now + timedelta(seconds=2),
+                "source": "app",
+                "severity": "high",
+            },
         ]
         results = find_correlations(
             log_anomalies, metric_anomalies, window_seconds=300, min_confidence=0.5
@@ -129,7 +137,7 @@ class TestFindCorrelations:
 
 class TestNoCorrelationOutsideWindow:
     def test_too_far_apart_not_correlated(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         log_anomalies = [
             {
                 "id": "log-1",
@@ -152,7 +160,7 @@ class TestNoCorrelationOutsideWindow:
         assert len(results) == 0
 
     def test_low_confidence_filtered(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         log_anomalies = [
             {
                 "id": "log-1",

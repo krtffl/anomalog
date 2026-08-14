@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from anomalog.ml.baseline import BaselineModel
 from anomalog.types import Anomaly, AnomalyType, Severity
+
+if TYPE_CHECKING:
+    from anomalog.ml.baseline import BaselineModel
 
 
 def detect_error_rate_spike(
@@ -26,9 +29,7 @@ def detect_error_rate_spike(
         else:
             return None
     else:
-        z_score = (
-            current_error_rate - baseline.error_rate_mean
-        ) / baseline.error_rate_std
+        z_score = (current_error_rate - baseline.error_rate_mean) / baseline.error_rate_std
 
     threshold = 5.0 - sensitivity * 3.0  # Range: 2.0-5.0
     if z_score <= threshold:
@@ -43,7 +44,7 @@ def detect_error_rate_spike(
         severity=severity,
         score=score,
         source=baseline.source,
-        detected_at=datetime.now(timezone.utc),
+        detected_at=datetime.now(UTC),
         description=(
             f"Error rate spike detected "
             f"(z-score={z_score:.1f}, rate={current_error_rate:.3f}, "

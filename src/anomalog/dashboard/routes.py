@@ -24,12 +24,14 @@ async def index(request: Request) -> HTMLResponse:
         anomalies = duck.get_recent_anomalies(limit=20)
         for src in config.sources:
             baseline = state.get("baselines", {}).get(src.name)
-            sources_info.append({
-                "name": src.name,
-                "method": src.method,
-                "has_baseline": baseline is not None,
-                "sensitivity": src.sensitivity,
-            })
+            sources_info.append(
+                {
+                    "name": src.name,
+                    "method": src.method,
+                    "has_baseline": baseline is not None,
+                    "sensitivity": src.sensitivity,
+                }
+            )
 
     return templates.TemplateResponse(
         request,
@@ -78,9 +80,7 @@ async def alerts_page(request: Request) -> HTMLResponse:
 async def capacity_page(request: Request) -> HTMLResponse:
     state = request.app.state.extra
     pro_enabled = state.get("pro_enabled", False)
-    return templates.TemplateResponse(
-        request, "capacity.html", {"pro_enabled": pro_enabled}
-    )
+    return templates.TemplateResponse(request, "capacity.html", {"pro_enabled": pro_enabled})
 
 
 @router.get("/correlation", response_class=HTMLResponse)

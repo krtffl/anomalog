@@ -5,12 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import httpx
 import structlog
 
-from anomalog.config import MetricsTargetConfig
+if TYPE_CHECKING:
+    from anomalog.config import MetricsTargetConfig
 
 logger = structlog.get_logger(__name__)
 
@@ -48,7 +50,7 @@ def parse_prometheus_text(
 ) -> list[dict]:
     """Parse Prometheus exposition format text into metric samples."""
     samples: list[dict] = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     metric_type_map: dict[str, str] = {}
 
     compiled_includes = [re.compile(p) for p in include_patterns] if include_patterns else []
@@ -87,15 +89,17 @@ def parse_prometheus_text(
 
         labels_hash = compute_labels_hash(labels)
 
-        samples.append({
-            "name": name,
-            "labels_hash": labels_hash,
-            "labels": json.dumps(labels),
-            "value": value,
-            "timestamp": now,
-            "metric_type": metric_type,
-            "source": source,
-        })
+        samples.append(
+            {
+                "name": name,
+                "labels_hash": labels_hash,
+                "labels": json.dumps(labels),
+                "value": value,
+                "timestamp": now,
+                "metric_type": metric_type,
+                "source": source,
+            }
+        )
 
     return samples
 

@@ -78,12 +78,10 @@ class TestBridge:
     """Tests that verify the bridge module loads correctly."""
 
     def test_bridge_imports(self) -> None:
-        from anomalog.parser.bridge import RUST_AVAILABLE, detect_format
+        from anomalog.parser.bridge import detect_format
 
         # Should work regardless of Rust availability
-        result = detect_format(
-            ['{"level":"info","msg":"test"}', '{"level":"error","msg":"fail"}']
-        )
+        result = detect_format(['{"level":"info","msg":"test"}', '{"level":"error","msg":"fail"}'])
         assert result in ("json", "plain")  # Python fallback may return "plain"
 
     def test_bridge_parse_line(self) -> None:

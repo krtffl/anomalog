@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import joblib
 import numpy as np
 import structlog
 from sklearn.ensemble import IsolationForest
 
-from anomalog.storage.duckdb import DuckDBStorage
-from anomalog.storage.sqlite import SQLiteStorage
+if TYPE_CHECKING:
+    from anomalog.storage.duckdb import DuckDBStorage
+    from anomalog.storage.sqlite import SQLiteStorage
 
 logger = structlog.get_logger(__name__)
 
@@ -65,7 +68,7 @@ def train_baseline(
 
     Returns the trained model, or None if insufficient data.
     """
-    since = datetime.now(timezone.utc) - timedelta(hours=training_window_hours)
+    since = datetime.now(UTC) - timedelta(hours=training_window_hours)
     logs = duck.get_recent_logs(source, since, limit=100_000)
 
     if len(logs) < MIN_TRAINING_LINES:
@@ -94,9 +97,7 @@ def train_baseline(
         tid = log.get("template_id")
         if tid:
             template_counts[tid] = template_counts.get(tid, 0) + 1
-    template_frequencies = {
-        tid: count / total for tid, count in template_counts.items()
-    }
+    template_frequencies = {tid: count / total for tid, count in template_counts.items()}
 
     # Latency baseline (extract numeric latency values from fields)
     latencies = _extract_latencies(logs)
@@ -124,7 +125,7 @@ def train_baseline(
         template_frequencies=template_frequencies,
         latency_baseline=latency_baseline,
         isolation_forest=isolation_forest,
-        trained_at=datetime.now(timezone.utc),
+        trained_at=datetime.now(UTC),
         lines_trained=total,
     )
 
@@ -160,9 +161,7 @@ def _parse_timestamp(ts: str | datetime | None) -> datetime | None:
         return None
 
 
-def _compute_bucket_error_rates(
-    logs: list[dict], bucket_minutes: int = 5
-) -> list[float]:
+def _compute_bucket_error_rates(logs: list[dict], bucket_minutes: int = 5) -> list[float]:
     """Compute error rate per time bucket."""
     if not logs:
         return []
@@ -253,10 +252,8 @@ def _build_feature_vectors(logs: list[dict], bucket_minutes: int = 5) -> np.ndar
         if fields:
             for key in ("latency", "duration", "response_time", "elapsed"):
                 if key in fields:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         b["latencies"].append(float(fields[key]))
-                    except (ValueError, TypeError):
-                        pass
                     break
 
     if not buckets:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import httpx
@@ -16,7 +16,6 @@ from anomalog.alert.dispatcher import (
 from anomalog.config import AlertChannelConfig
 from anomalog.storage.sqlite import SQLiteStorage
 from anomalog.types import Anomaly, AnomalyType, Severity
-
 
 # --- Fixtures ---
 
@@ -34,7 +33,7 @@ def _make_anomaly(
         severity=severity,
         score=0.92,
         source=source,
-        detected_at=datetime(2026, 3, 23, 12, 0, 0, tzinfo=timezone.utc),
+        detected_at=datetime(2026, 3, 23, 12, 0, 0, tzinfo=UTC),
         description="Error rate spiked to 15% (baseline: 2%)",
         context=context or {"template_id": "tpl_001"},
         sample_lines=sample_lines or ["ERROR disk full on /dev/sda1", "ERROR OOM kill"],
@@ -286,9 +285,7 @@ class TestDispatcher:
 
         monkeypatch.setattr("anomalog.alert.dispatcher.telegram.send_alert", mock_telegram)
         monkeypatch.setattr("anomalog.alert.dispatcher.slack.send_alert", mock_slack)
-        monkeypatch.setattr(
-            "anomalog.alert.dispatcher.alertmanager.send_alert", mock_am
-        )
+        monkeypatch.setattr("anomalog.alert.dispatcher.alertmanager.send_alert", mock_am)
 
         result = await dispatch_alert(
             anomaly, [ch_telegram, ch_slack, ch_alertmanager], sqlite, cooldown_minutes=30

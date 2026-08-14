@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 import warnings
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
-
-if TYPE_CHECKING:
-    pass
 
 MIN_DATA_POINTS = 72
 
@@ -35,7 +31,7 @@ def _resample_to_5min(
         return [], np.array([])
 
     # Sort by timestamp
-    paired = sorted(zip(timestamps, values), key=lambda x: x[0])
+    paired = sorted(zip(timestamps, values, strict=False), key=lambda x: x[0])
     ts_sorted = [p[0] for p in paired]
     vals_sorted = [p[1] for p in paired]
 
@@ -54,7 +50,7 @@ def _resample_to_5min(
 
     # Map values to grid buckets (use last value in each bucket)
     bucket_vals: dict[datetime, float] = {}
-    for t, v in zip(ts_sorted, vals_sorted):
+    for t, v in zip(ts_sorted, vals_sorted, strict=False):
         bucket = t.replace(second=0, microsecond=0)
         bucket = bucket.replace(minute=(bucket.minute // 5) * 5)
         bucket_vals[bucket] = v
@@ -110,9 +106,12 @@ def train_model(
     # Decide model type based on hints
     use_arima = False
     hint_lower = metric_hint.lower()
-    if "disk" in hint_lower or "storage" in hint_lower or "capacity" in hint_lower:
-        use_arima = True
-    elif _is_monotonically_increasing(resampled_vals):
+    if (
+        "disk" in hint_lower
+        or "storage" in hint_lower
+        or "capacity" in hint_lower
+        or _is_monotonically_increasing(resampled_vals)
+    ):
         use_arima = True
 
     # Split into train/test (90/10)
@@ -128,9 +127,7 @@ def train_model(
     return model, model_type, rmse
 
 
-def _train_arima(
-    train_vals: np.ndarray, test_vals: np.ndarray
-) -> tuple[object, str, float]:
+def _train_arima(train_vals: np.ndarray, test_vals: np.ndarray) -> tuple[object, str, float]:
     """Train ARIMA(1,1,0) for trending metrics."""
     from statsmodels.tsa.arima.model import ARIMA
 
@@ -149,22 +146,21 @@ def _train_arima(
     return fitted, "arima", rmse
 
 
-def _train_autoarima(
-    train_vals: np.ndarray, test_vals: np.ndarray
-) -> tuple[object, str, float]:
+def _train_autoarima(train_vals: np.ndarray, test_vals: np.ndarray) -> tuple[object, str, float]:
     """Train AutoARIMA for general metrics."""
+    import pandas as pd
     from statsforecast import StatsForecast
     from statsforecast.models import AutoARIMA
 
-    import pandas as pd
-
     # StatsForecast expects a DataFrame with columns: unique_id, ds, y
     ds = pd.date_range("2020-01-01", periods=len(train_vals), freq="5min")
-    df = pd.DataFrame({
-        "unique_id": ["metric"] * len(train_vals),
-        "ds": ds,
-        "y": train_vals,
-    })
+    df = pd.DataFrame(
+        {
+            "unique_id": ["metric"] * len(train_vals),
+            "ds": ds,
+            "y": train_vals,
+        }
+    )
 
     sf = StatsForecast(
         models=[AutoARIMA(season_length=12)],  # 12 * 5min = 1 hour seasonality
@@ -186,16 +182,14 @@ def _train_autoarima(
     return sf, "autoarima", rmse
 
 
-def predict(
-    model: object, model_type: str, horizon_hours: int
-) -> list[tuple[str, float]]:
+def predict(model: object, model_type: str, horizon_hours: int) -> list[tuple[str, float]]:
     """Generate predictions for the given horizon.
 
     Returns list of (iso_timestamp, predicted_value) tuples.
     """
     steps = horizon_hours * 12  # 5-min intervals per hour
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     if model_type == "arima":
         forecast = model.forecast(steps=steps)  # type: ignore[union-attr]

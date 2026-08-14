@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from typing import TYPE_CHECKING
 
 import structlog
+from fastapi import APIRouter, Header, HTTPException, Request
 
-from anomalog.ingest.router import IngestionRouter
+if TYPE_CHECKING:
+    from anomalog.ingest.router import IngestionRouter
 
 logger = structlog.get_logger(__name__)
 
@@ -17,9 +19,7 @@ _ingestion_router: IngestionRouter | None = None
 _api_keys: list[str] = []
 
 
-def configure(
-    ingestion_router: IngestionRouter, api_keys: list[str] | None = None
-) -> None:
+def configure(ingestion_router: IngestionRouter, api_keys: list[str] | None = None) -> None:
     """Configure the HTTP ingestion endpoint with a router and optional API keys."""
     global _ingestion_router, _api_keys  # noqa: PLW0603
     _ingestion_router = ingestion_router

@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 
-from anomalog.storage.duckdb import DuckDBStorage
+if TYPE_CHECKING:
+    from anomalog.storage.duckdb import DuckDBStorage
 
 logger = structlog.get_logger(__name__)
 
@@ -82,24 +84,24 @@ async def receive_metrics(
                         dp_key = attr.get("key", "")
                         dp_value_obj = attr.get("value", {})
                         labels[dp_key] = str(
-                            dp_value_obj.get(
-                                "stringValue", dp_value_obj.get("intValue", "")
-                            )
+                            dp_value_obj.get("stringValue", dp_value_obj.get("intValue", ""))
                         )
 
                     value = dp.get("asDouble") or dp.get("asInt", 0)
                     labels_str = json.dumps(labels, sort_keys=True)
                     labels_hash = hashlib.sha256(labels_str.encode()).hexdigest()[:16]
 
-                    samples.append({
-                        "name": name,
-                        "labels_hash": labels_hash,
-                        "labels": labels_str,
-                        "value": float(value),
-                        "timestamp": datetime.now(timezone.utc),
-                        "metric_type": metric_type,
-                        "source": source,
-                    })
+                    samples.append(
+                        {
+                            "name": name,
+                            "labels_hash": labels_hash,
+                            "labels": labels_str,
+                            "value": float(value),
+                            "timestamp": datetime.now(UTC),
+                            "metric_type": metric_type,
+                            "source": source,
+                        }
+                    )
 
     if samples:
         _duck.insert_metric_samples(samples)
